@@ -10,19 +10,58 @@ app.use(cors());
 const users = [];
 
 function checksExistsUserAccount(request, response, next) {
-  // Complete aqui
+  const {username}= request.headers;
+  const user = users.find(u => u.username === username)
+  if(!user){
+    return response.status(404).json({error: "User not found"})
+  }
+  request.user = user;
+  return next();
 }
 
+
 function checksCreateTodosUserAvailability(request, response, next) {
-  // Complete aqui
+  const user = request.user
+  if(!user.pro && user.todos.length >= 10){
+    return response.status(403).json({error: "Your user is not a pro and has already exceeded 10 tasks"})
+  }
+  return next();
 }
 
 function checksTodoExists(request, response, next) {
-  // Complete aqui
+  const {id} = request.params;
+  const {username}= request.headers;
+
+  if(!validate(id)){
+    return response.status(400).json({ error: 'Invalid Id'})
+  }
+
+  const user = users.find(u => u.username === username)
+  if(!user){
+    return response.status(404).json({error: "User not found"})
+  }
+
+  const todo  = user.todos.find(t => t.id === id);
+
+  if(!todo){
+    return response.status(404).json({error: "Todo not found"})
+  }
+
+  request.user = user;
+  request.todo = todo;
+
+  return next()
 }
 
 function findUserById(request, response, next) {
-  // Complete aqui
+  const {id} = request.params;
+  const user = users.find(u => u.id === id);
+
+  if(!user){
+    return response.status(404).json({error: "User not found"})
+  }
+  request.user = user;
+  return next();
 }
 
 app.post('/users', (request, response) => {
@@ -71,6 +110,8 @@ app.get('/todos', checksExistsUserAccount, (request, response) => {
   return response.json(user.todos);
 });
 
+
+
 app.post('/todos', checksExistsUserAccount, checksCreateTodosUserAvailability, (request, response) => {
   const { title, deadline } = request.body;
   const { user } = request;
@@ -86,6 +127,7 @@ app.post('/todos', checksExistsUserAccount, checksCreateTodosUserAvailability, (
   user.todos.push(newTodo);
 
   return response.status(201).json(newTodo);
+
 });
 
 app.put('/todos/:id', checksTodoExists, (request, response) => {
